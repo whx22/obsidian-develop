@@ -63,3 +63,79 @@ STC98C52的T0和T1的四种工作模式：
 
 ![[Interrupt System#^interrupt-register]]
 
+
+## 按键控制LED流水灯模式
+
+### 定时器/计数器0初始化函数
+
+#### 详细注释代码
+
+```c
+void Timer0Init() {
+// 设置控制寄存器TMOD TCON
+	// TMOD 不可位寻址
+	// GATE = 0; 不开启外部引脚控制
+	// C/~T = 0; 工作在计时器模式
+	// M1 = 0; M0 = 1; 工作在模式1 
+	// TMOD = 0x01; 影响timer1设置
+	TMOD &= 0xF0; // 保留高4位，清零低4位
+	TMOD |= 0x01; // 设置低4位（timer0）
+
+	// TCON 可位寻址
+	// 中断溢出标志位初始化为0
+	TF0 = 0;
+	// 开启timer_0
+	TR0 = 1;
+
+// 设置通用寄存器TH0 TH0
+// 脉冲频率：1MHz，计时器+1速度：1us
+// TH0:TH1(16bits)：maximum = 65535，initial value = 64535
+// 设置为每隔1ms触发一次中断
+	TH0 = 64535 / 256;	// 取64535高位
+	TL0 = 64535 % 256 + 1; 	// 取64535低位，65536时溢出
+
+// 设置中断寄存器
+	// 开启timer_0中断
+	ET0 = 1;
+	// 开启所有中断
+	EA = 1;
+	// 设置timer_0优先级为0
+	PT0 = 0;
+}
+
+```
+
+#### STC官方定时器/计数器代码
+
+```c
+void Timer0Init(void)		//1毫秒@12.000MHz
+{
+// 	AUXR &= 0x7F;		//定时器时钟12T模式 新版本代码
+	TMOD &= 0xF0;		//设置定时器模式
+	TMOD |= 0x01;		//设置定时器模式
+	TL0 = 0x18;		//设置定时初值
+	TH0 = 0xFC;		//设置定时初值
+	TF0 = 0;		//清除TF0标志
+	TR0 = 1;		//定时器0开始计时
+	ET0 = 1; 	// 开启timer_0中断
+	EA = 1; 	// 开启所有中断
+	PT0 = 0; 	// 设置timer_0优先级为0
+}
+```
+
+### 定时器/计数器0中断服务程序
+
+```c
+// timer0 中断服务程序模板（中断号：1）
+void Timer0_Routine() interrupt 1 {
+	static unsigned int T0Count;
+	// 设施T0Count每个1ms加1
+	TL0 = 0x18;		//设置定时初值
+	TH0 = 0xFC;		//设置定时初值
+	++T0Count;
+	if (T0Count >= 1000) {
+		T0Count = 0;
+	}
+	
+}
+```

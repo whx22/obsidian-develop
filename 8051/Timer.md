@@ -135,7 +135,6 @@ void Timer0_Routine() interrupt 1 {
 	++T0Count;
 	if (T0Count >= 1000) {
 		T0Count = 0;
-	}
-	
+	}	
 }
 ```

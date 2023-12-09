@@ -64,7 +64,7 @@ STC98C52的T0和T1的四种工作模式：
 ![[Interrupt System#^interrupt-register]]
 
 
-## 按键控制LED流水灯模式
+## 使用中断程序代码
 
 ### 定时器/计数器0初始化函数
 
@@ -125,6 +125,8 @@ void Timer0Init(void)		//1毫秒@12.000MHz
 
 ### 定时器/计数器0中断服务程序
 
+- ! 中断服务程序不能执行过于复杂的任务，不可长时间处于中断函数内部。
+
 ```c
 // timer0 中断服务程序模板（中断号：1）
 void Timer0_Routine() interrupt 1 {
@@ -135,6 +137,97 @@ void Timer0_Routine() interrupt 1 {
 	++T0Count;
 	if (T0Count >= 1000) {
 		T0Count = 0;
+		// 中断服务程序功能实现代码
+	}	
+}
+```
+
+### 按键控制LED流水灯模式
+
+```c
+#include <REGX52.H>
+#include "Timer0.h"
+#include "Key.h"
+#include <INTRINS.H>
+
+unsigned char KeyNum, LEDMode;
+
+void main() {
+    P2 = 0xFE;
+    Timer0Init();
+    while (1) {
+        KeyNum = Key();
+        if (KeyNum) {
+            if (KeyNum == 1) {
+                ++LEDMode;
+                if (LEDMode >= 2) {LEDMode = 0;}
+            }
+        }
+    }
+}
+
+void Timer0_Routine() interrupt 1 {
+	static unsigned int T0Count;
+	// 设施T0Count每个1ms加1
+	TL0 = 0x18;		//设置定时初值
+	TH0 = 0xFC;		//设置定时初值
+	++T0Count;
+	if (T0Count >= 500) {
+		T0Count = 0;
+		if (LEDMode == 0) {
+			P2 = _crol_(P2, 1);
+		}
+		if (LEDMode == 1) {
+			P2 = _cror_(P2, 1);
+		}
+	}	
+}
+```
+
+### 定时器时钟
+
+```c
+#include <REGX52.H>
+#include "Delay.h"
+#include "LCD1602.h"
+#include "Timer0.h"
+
+unsigned char Sec = 55, Min = 59, Hour = 23;
+
+void main() {
+	LCD_Init();
+	Timer0Init();
+
+	LCD_ShowString(1, 1, "Clock:");
+	LCD_ShowString(2, 1, "  :  :");
+	while (1) {
+		LCD_ShowNum(2, 1, Hour, 2);
+		LCD_ShowNum(2, 4, Min, 2);
+		LCD_ShowNum(2, 7, Sec, 2);
+	}
+}
+
+// timer0 中断服务程序模板（中断号：1）
+void Timer0_Routine() interrupt 1 {
+	static unsigned int T0Count;
+	// 设施T0Count每个1ms加1
+	TL0 = 0x18;		//设置定时初值
+	TH0 = 0xFC;		//设置定时初值
+	++T0Count;
+	if (T0Count >= 1000) {
+		T0Count = 0;
+		++Sec;
+		if (Sec >= 60) {
+			Sec = 0;
+			++Min;
+			if (Min >= 60) {
+				Min = 0;
+				++Hour;
+				if (Hour >= 24) {
+					Hour = 0;
+				}
+			}
+		}
 	}	
 }
 ```

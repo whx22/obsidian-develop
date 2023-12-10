@@ -25,6 +25,8 @@ modify time:
 
 ## 中断结构
 
+![[Pasted image 20231209204445.png]]
+
 ## 中断寄存器
 
 

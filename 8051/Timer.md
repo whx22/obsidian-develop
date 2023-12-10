@@ -41,6 +41,10 @@ STC98C52的T0和T1的四种工作模式：
 
 ![[Pasted image 20231208161047.png]]
 
+连接的相关中断系统
+
+![[Interrupt System#中断结构]]
+
 #### 脉冲信号产生来源
 
 1. （T：timer）SYSclk(system clock)：系统时钟，即晶振周期，本开发板的晶振为12MHz。本开发板默认对系统时钟进行12T分频，分频后为1MHz，晶振周期为1us

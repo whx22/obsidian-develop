@@ -19,7 +19,7 @@ modify time:
 
 ![[Pasted image 20231208164129.png]]
 
-### 中断程序接口
+### 中断程序接口函数API
 
 ![[Pasted image 20231208164206.png]]
 

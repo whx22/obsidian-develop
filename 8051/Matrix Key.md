@@ -60,8 +60,8 @@ unsigned char MatrixKey();
  * @brief 矩阵键盘读取按键键码
  * @param 无
  * @retval KeyNumber: 按下按键的键码值
- * description: 如果按键保持按下状态，程序在循环中，松手后，返回按键键码值， \
- *              没有按键按下时返回0
+ * @description: 如果按键保持按下状态，程序在循环中，松手后，返回按键键码值， \
+ *               没有按键按下时返回0，按列扫描
  */
 unsigned char MatrixKey() {
 	unsigned char KeyNumber = 0;
@@ -113,7 +113,7 @@ void main() {
 	LCD_ShowString(1, 1, "MatrixKey:");
 	while (1) {
 		KeyNum = MatrixKey();
-		if (KeyNum) {
+		if (KeyNum) { // 如果不加判断，LCD显示对应按键数值后，立即被置零
 			LCD_ShowNum(2, 1, KeyNum, 2);
 		}
 	}
@@ -152,6 +152,7 @@ void main() {
 	LCD_ShowString(1, 1, "Password:");
 	while (1) {
 		KeyNum = MatrixKey();
+		// 存在按键按下
 		if (KeyNum) {
 			// S1-S10
 			if (KeyNum <= 10) {

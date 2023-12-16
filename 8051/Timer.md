@@ -13,6 +13,8 @@ modify time:
 
 CPU执行Delay函数时，CPU被阻塞，无法进行其他任务。
 
+通过指定定时器工作模式，周期性触发定时器中断，并执行相应中断处理函数。
+
 ### location
 
 51单片机的定时器属于单片机的内部资源，其电路的连接和运转均在单片机内部完成。
@@ -64,6 +66,7 @@ STC98C52的T0和T1的四种工作模式：
 
 ### TL0、TL1、TH0、TL1：存储定时器/计数器内容
 
+## 中断相关寄存器
 
 ![[Interrupt System#^interrupt-register]]
 
@@ -71,6 +74,8 @@ STC98C52的T0和T1的四种工作模式：
 ## 使用中断程序代码
 
 ### 定时器/计数器0初始化函数
+
+配置相应定时器和中断寄存器，使相应硬件工作在指定的工作模式。
 
 #### 详细注释代码
 
@@ -139,7 +144,7 @@ void Timer0_Routine() interrupt 1 {
 	TL0 = 0x18;		//设置定时初值
 	TH0 = 0xFC;		//设置定时初值
 	++T0Count;
-	if (T0Count >= 1000) {
+	if (T0Count >= 1000) { // 每1秒执行一次中断服务程序的功能实现
 		T0Count = 0;
 		// 中断服务程序功能实现代码
 	}	
@@ -176,13 +181,13 @@ void Timer0_Routine() interrupt 1 {
 	TL0 = 0x18;		//设置定时初值
 	TH0 = 0xFC;		//设置定时初值
 	++T0Count;
-	if (T0Count >= 500) {
+	if (T0Count >= 500) { // 间隔500ms，执行一次
 		T0Count = 0;
 		if (LEDMode == 0) {
-			P2 = _crol_(P2, 1);
+			P2 = _crol_(P2, 1); // 循环左移1位，intrins库，intrins头文件
 		}
 		if (LEDMode == 1) {
-			P2 = _cror_(P2, 1);
+			P2 = _cror_(P2, 1); // 循环右移1位，intrins库，intrins头文件
 		}
 	}	
 }
@@ -218,7 +223,7 @@ void Timer0_Routine() interrupt 1 {
 	TL0 = 0x18;		//设置定时初值
 	TH0 = 0xFC;		//设置定时初值
 	++T0Count;
-	if (T0Count >= 1000) {
+	if (T0Count >= 1000) { // 间隔1s，执行一次
 		T0Count = 0;
 		++Sec;
 		if (Sec >= 60) {

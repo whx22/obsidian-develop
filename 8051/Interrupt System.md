@@ -32,7 +32,7 @@ modify time:
 
 ![[Pasted image 20231208164831.png]]^interrupt-register
 
-### IE：中断允许寄存器
+### IE：中断允许寄存器（可位寻址）
 
 ![[Pasted image 20231208171110.png]]
 

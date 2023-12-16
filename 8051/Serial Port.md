@@ -20,7 +20,7 @@ modify time: 2023-12-10T20:32:00
 
 电平标准是数据1和数据0的表达方式，是传输线缆中认为规定的电压与数据的对应关系。
 
-1. 正常信号：使用相较于GND电压的叉值表示数据
+1. 正常信号：使用相较于GND电压的差值表示数据
 2. 差分信号：使用两线电压差表示数据，适用与远距离信号传输
 
 ## 接口及引脚的定义
@@ -52,7 +52,7 @@ modify time: 2023-12-10T20:32:00
 
 ## 51单片机的UART
 
-### 工作模式1
+### 工作模式1（常用）
 
 8位UART，波特率可变
 
@@ -107,7 +107,7 @@ void UART_SendByte(unsigned char Byte);
 void UART_Init() {
 // 串口通信控制寄存器SCON
 	// 工作模式1：SM0 = 0 SM1 = 1
-	// 接受使能 REN = 0
+	// 接受使能 REN = 1
 	SCON = 0x50;
 // 电源控制寄存器PCON
 	// 波特率加倍SMOD = 1
@@ -130,8 +130,8 @@ void UART_Init() {
  */
 void UART_SendByte(unsigned char Byte) {
 	SBUF = Byte;
-	while(TI == 0);
-	TI = 0;
+	while(TI == 0); // 等待数据传输完成，TI == 1
+	TI = 0; // 手动将TI串口数据传输中断标志位重新置0
 }
 
 
@@ -139,7 +139,7 @@ void UART_SendByte(unsigned char Byte) {
 void UART_Routine() interrupt 4 {
 	if (RI == 1) {
 
-		RI = 0;
+		RI = 0; // 手动将RI串口数据接受中断标志位重新置0
 	}
 }
 */

@@ -83,6 +83,6 @@ void Nixie(unsigned char Location, unsigned char Number) {
 
 	// 解决数码管动态显示错位问题——消影 
 	Delay(1); // 维持选中并显示，产生视觉残留
-	P0 = 0x00; // 断码清零
+	P0 = 0x00; // 段码清零，防止显示数据窜位
 }
 ```

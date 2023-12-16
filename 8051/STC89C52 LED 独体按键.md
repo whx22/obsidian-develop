@@ -10,7 +10,7 @@ tags:
 ---
 ## STC89C52 介绍
 
-[STC89Cxx中文参考手册](./c51/attachments/STC89Cxx中文参考手册)
+[STC89Cxx中文参考手册](./attachments/STC89Cxx中文参考手册)
 
 [普中-2&普中-3&普中-4开发板原理图](./c51/attachments/普中-2&普中-3&普中-4开发板原理图)
 

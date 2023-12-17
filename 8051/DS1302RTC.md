@@ -56,3 +56,17 @@ modify time:
 
 1. SCLK时钟上升沿：单片机向DS1302寄存器写入数据，DS1302读出单片机寄存器数据
 2. SCLK时钟下降沿：单片机从DS1302寄存器读出数据，DS1302写入单片机寄存器数据
+
+## BCD
+
+BCD(Binary Coded Decimal)，用4位二进制数表示1位十进制制数。
+
+DS1302中RTC相关寄存器使用BCD编码
+
+### BCD码转十进制（两位BCD码）
+
+`DEC = BCD / 16 * 10 + BCD %16;`
+
+### 十进制转BCD码（两位BCD码）
+
+`BCD = DEC / 10 * 16 + DEC % 10;`

@@ -60,9 +60,9 @@ modify time: 2023-12-17T13:05:00
 #include <REGX52.H>
 #include "Delay.h"
 
-sbit RCK = P3^5; // RCLK
-sbit SCK = P3^6; // SRCLK
-sbit SER = P3^4; // SER
+sbit RCK = P3^5; // RCLK 	register clock 数据写入边沿触发信号端口（一次写入八位）
+sbit SCK = P3^6; // SRCLK 	数据移位边沿触发信号端口
+sbit SER = P3^4; // SER		数据信号端口
 
 #define MATRIX_LED_PORT P0
 
@@ -90,9 +90,9 @@ void _74HC595_WriteByte(unsigned char Byte) {
  */
 void MatrixLED_ShowColumn(unsigned char Column,Data) {
 	_74HC595_WriteByte(Data);
-	MATRIX_LED_PORT = ~(0x80 >> Column);
+	MATRIX_LED_PORT = ~(0x80 >> Column); // 列选
 	Delay(1); // 延时显示
-	MATRIX_LED_PORT = 0xFF; // 位清零
+	MATRIX_LED_PORT = 0xFF; // 列选清零
 }
 
 void main() {
@@ -131,9 +131,9 @@ void MatrixLED_ShowColumn(unsigned char Column,Data);
 #include <REGX52.H>
 #include "Delay.h"
 
-sbit RCK = P3^5; // RCLK
-sbit SCK = P3^6; // SRCLK
-sbit SER = P3^4; // SER
+sbit RCK = P3^5; // RCLK 	register clock 数据写入边沿触发信号端口（一次写入八位）
+sbit SCK = P3^6; // SRCLK 	数据移位边沿触发信号端口
+sbit SER = P3^4; // SER		数据信号端口
 #define MATRIX_LED_PORT P0
 
 /**
@@ -170,9 +170,9 @@ void MatrixLED_Init() {
  */
 void MatrixLED_ShowColumn(unsigned char Column,Data) {
 	_74HC595_WriteByte(Data);
-	MATRIX_LED_PORT = ~(0x80 >> Column);
+	MATRIX_LED_PORT = ~(0x80 >> Column); // 列选
 	Delay(1); // 延时显示
-	MATRIX_LED_PORT = 0xFF; // 位清零
+	MATRIX_LED_PORT = 0xFF; // 列选清零
 }
 ```
 
@@ -183,9 +183,9 @@ void MatrixLED_ShowColumn(unsigned char Column,Data) {
 #include "Delay.h"
 #include "MatrixLED.h"
 
-// code keywork : 将动画数组存放到存放代码的flash中，默认数据存放置EEPROM中
-// EEPROM : 数据段存储器，存放全局变量，静态变量，存储空间小，初始化后不可以修改，只读
-// flash : 代码段存储器，存放指令代码，存储空间大，初始化后可以修改，可读可写
+// code keywork : 将动画数组存放到存放到flash中的代码段，默认数据存放置RAM中的数据段
+// RAM(512Bytes) : 数据段存储器，存放全局变量，静态变量，存储空间小，初始化后可以修改，可读可写
+// flash : 代码段存储器，存放指令代码，存储空间大，初始化后不可以修改，只读
 unsigned char code Animation_1[] = {
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0xFF,0x08,0x08,0x08,0xFF,0x00,0x0E,0x15,0x15,0x15,0x0C,0x00,0xFE,0x01,0x02,0x00,

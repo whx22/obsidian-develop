@@ -205,7 +205,6 @@ unsigned char DS1302_ReadByte(unsigned char Command) {
  * @note	DS1302中时间使用BCD编码，
  			十进制(DEC)编码转为BCD编码
 			BCD = DEC / 10 * 16 + DEC % 10;
-
  */
 void DS1302_SetTime(void) {
 	// 关闭写保护
@@ -329,7 +328,7 @@ void TimeShow(void) {
  			设置单片机数据区（RAM）存储的日期
  * @param	无
  * @retval 	无
- * @note 	设置结束后，将单片机数据区（RAM）存储的日期存储到DS1302
+ * @note 	设置结束后，将单片机数据区（RAM）存储的日期存储到DS1302（main函数中进行）
  */
 void TimeSet(void) {
 	if (KeyNum == 2) { // 选择设置位
@@ -398,7 +397,7 @@ void main() {
 
 //	DS1302_WriteByte(0x8E, 0x00); // 解除DS1302写保护
 														  
-	DS1302_SetTime(); // 使用单片机数据区（EEPROM）存储的时间数据设置DS1302初始值
+	DS1302_SetTime(); // 使用单片机数据区（RAM）存储的时间数据初始值设置DS1302初始值
 	while (1) {
 		KeyNum = Key();
 		if (KeyNum == 1) { // 模式切换

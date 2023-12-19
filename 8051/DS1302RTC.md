@@ -79,7 +79,7 @@ DS1302中RTC相关寄存器使用BCD编码
 #ifndef __DS1302_H__
 #define __DS1302_H__
 
-extern char DS1302_Time[];
+extern unsigned char DS1302_Time[];
 
 void DS1302_Init(void);
 void DS1302_WriteByte(unsigned char Command, Data);
@@ -96,12 +96,12 @@ void DS1302_ReadTime(void);
 #include <REGX52.H>
 
 // 位声明：单片机与DS1302芯片连接的端口定义
-sbit DS1302_SCLK = P3^6;
-sbit DS1302_IO = P3^4;
-sbit DS1302_CE = P3^5;
+sbit DS1302_SCLK = P3^6; // 接受和发送数据的边沿触发信号端口
+sbit DS1302_IO = P3^4; // 数据端口
+sbit DS1302_CE = P3^5; // 使能端口
 
-// 存放时间数据的数组（单片机数据区，EEPROM）
-char DS1302_Time[] = {
+// 存放时间数据的数组（单片机数据区，RAM）
+unsigned char DS1302_Time[] = {
 	23, // year
 	12, // month
 	17,	// date
@@ -199,7 +199,7 @@ unsigned char DS1302_ReadByte(unsigned char Command) {
 }
 
 /**
- * @brief	使用单片机中的时间数组设置DS1302芯片存储的时间
+ * @brief	使用单片机中的时间数组（存储在RAM中）设置DS1302芯片存储的时间
  * @param	无
  * @retval	无
  * @note	DS1302中时间使用BCD编码，
@@ -222,7 +222,7 @@ void DS1302_SetTime(void) {
 }
 
 /**
- * @brief  	读取DS1302中存储的时间并设置到单片机中时间数组中	
+ * @brief  	读取DS1302中存储的时间并设置到单片机中时间数组（存储在RAM中）	
  * @param  	无
  * @retval	无
  * @note	DS1302中时间使用BCD编码，
@@ -279,6 +279,12 @@ void main() {
 ### DS1302可调时钟
 
 ```c
+/**
+ *　FIXME:显示模式下，按键长按下时，程序阻塞（LCD显示时间被阻塞，DS1302没有被阻塞）
+ * 	SOLUTION:使用中断扫描按键的转态代替使用while循序阻塞
+ *  使用中断代替阻塞
+ */
+
 #include <REGX52.H>
 #include "LCD1602.h"
 #include "DS1302.h"
@@ -303,7 +309,7 @@ char days_of_month(char year, month) {
 
 /**
  * @breif 	显示模式工作函数
- 			读取DS1302中的日期数据到单片机数据区（EEPROM）
+ 			读取DS1302中的日期数据到单片机数据区（RAM）
  			并使用LCD1602显示日期数据
  * @param	无
  * @retval 	无
@@ -320,10 +326,10 @@ void TimeShow(void) {
 
 /**
  * @breif 	设置模式工作函数
- 			设置单片机数据区（EEPROM）存储的日期
+ 			设置单片机数据区（RAM）存储的日期
  * @param	无
  * @retval 	无
- * @note 	设置结束后，将单片机数据区（EEPROM）存储的日期存储到DS1302
+ * @note 	设置结束后，将单片机数据区（RAM）存储的日期存储到DS1302
  */
 void TimeSet(void) {
 	if (KeyNum == 2) { // 选择设置位
@@ -401,7 +407,7 @@ void main() {
 				TimeSetSelect = 0; // 进入设置模式时，设置位数清零
 			} else if (MODE == 1) { // 设置模式 -> 显示模式 
 				MODE = 0;
-				DS1302_SetTime(); // 退出设置模式时，保存设置 
+				DS1302_SetTime(); // 退出设置模式时，保存设置到DS1302中
 			}
 		}
 		switch (MODE) {

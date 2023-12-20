@@ -384,3 +384,285 @@ void main() {
 ```c
 
 ```
+
+#### 使用中断按键扫描实现按键按下不阻塞主程序
+
+##### Key.h
+
+```c
+#ifndef __KEY_H__
+#define __KEY_H__
+
+unsigned char Key(void);
+void Key_Loop(void);
+
+#endif // __KEY_H__
+```
+
+##### Key.c
+
+```c
+#include <REGX52.h>
+#include "Delay.h"
+
+unsigned char Key_KeyNumber;
+
+/**
+ * @brief 	返回按下的键码值，并重置全局变量Key_KeyNumber
+ * @param	void
+ * @retval 	按下的按键键码
+ * @caller	main
+ * @callee	null
+ */
+unsigned char Key(void) {
+	// 实现按键只触发一次，后置0，使用Temp保存，并重置全局变量Key_KeyNumber
+	unsigned char Temp = 0;
+	Temp = Key_KeyNumber;
+	Key_KeyNumber = 0;
+	return Temp;
+}
+
+/**
+ * @brief 	获取按键状态函数
+ * @param	void
+ * @retval	按键状态
+ * @caller	Key_Loop
+ * @callee	null
+ * @note	按键按下：按键对应端口为低电平
+ */
+unsigned char Key_GetState(void) {
+	unsigned char KeyNumber = 0;
+	if (P3_1 == 0) {KeyNumber = 1;}
+	if (P3_0 == 0) {KeyNumber = 2;}
+	if (P3_2 == 0) {KeyNumber = 3;}
+	if (P3_3 == 0) {KeyNumber = 4;}
+	return KeyNumber;
+}
+
+/**
+ * @brief 	按键扫描，将全局变量Key_GetState设置为获取到的键码
+ * @param	void
+ * @retval	void
+ * @caller	Timer0_Routine interrupt 1
+ * @callee	Key_GetState
+ * @note 	通过判断按键状态是否存在从按下到松手的状态转换，实现松手时相应
+ 			Timer0_Routine中每间隔20ms触发一次该函数，
+			实现不断扫描按键而不阻塞，按键按下和松开的防抖
+ */
+void Key_Loop(void) {
+	static unsigned char NowState, LastState;
+	LastState = NowState;
+	NowState = Key_GetState();
+	if (LastState == 1 && NowState == 0) {
+		Key_KeyNumber = 1;
+	}
+	if (LastState == 2 && NowState == 0) {
+		Key_KeyNumber = 2;
+	}
+	if (LastState == 3 && NowState == 0) {
+		Key_KeyNumber = 3;
+	}
+	if (LastState == 4 && NowState == 0) {
+		Key_KeyNumber = 4;
+	}	
+}
+```
+
+#### 使用中断扫描设置数码管实现主程序进行其他操作时数码管正常显示
+
+##### Nixie.h
+
+```c
+#ifndef __NIXIE_H__
+#define __NIXIE_H__
+
+void Nixie_SetBuf(unsigned char Location, Number);
+void Nixie_Scan(unsigned char Location, Number);
+void Nixie_Loop(void);
+
+#endif // __NIXIE_H__
+```
+
+##### Nixie.c
+
+```c
+#include <REGX52.H>
+#include "Delay.h"
+
+// 数码管显示缓存数组
+unsigned char Nixie_Buf[9] = {0, 10, 10, 10, 10, 10, 10, 10, 10};
+
+// 数码管对应数字对应的段码表
+unsigned char NixieTable[] = \
+{0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F, 0x00, 0x40};
+// 0     1     2     3     4     5     6     7     8     9	  空  	 -
+
+
+/**
+ * @brief 	将指定位设置为需要显示的数据
+ * @param	Location: 指定显示的数码管
+ * @param	Number: 指定数码管显示的数字
+ * @retval	void
+ * @caller	main
+ * @callee 	null
+ */
+void Nixie_SetBuf(unsigned char Location, Number) {
+	Nixie_Buf[Location] = Number;	
+}
+
+/**
+ * @brief 	指定的数码管上显示指定数据
+ * @param	Location: 指定显示的数码管
+ * @param	Number: 指定数码管显示的数字
+ * @retval	void
+ * @caller  Nixie_Loop
+ * @callee	null
+ */
+void Nixie_Scan(unsigned char Location, Number) {
+	P0 = 0x00; // 断码清零
+	// 根据具体Location参数，选中对应数码管
+	switch(Location) {
+		case 1: P2_4 = 1, P2_3 = 1, P2_2 = 1; break; // 第一个数码管：LED8，Y7 
+		case 2: P2_4 = 1, P2_3 = 1, P2_2 = 0; break; 
+		case 3: P2_4 = 1, P2_3 = 0, P2_2 = 1; break;
+		case 4: P2_4 = 1, P2_3 = 0, P2_2 = 0; break;
+		case 5: P2_4 = 0, P2_3 = 1, P2_2 = 1; break;
+		case 6: P2_4 = 0, P2_3 = 1, P2_2 = 0; break;
+		case 7: P2_4 = 0, P2_3 = 0, P2_2 = 1; break;
+		case 8: P2_4 = 0, P2_3 = 0, P2_2 = 0; break;
+	}
+	// 根据Number参数显示对应数字
+	P0 = NixieTable[Number];
+}
+
+/**
+ * @brief 	数码管的每一位显示对应位的数据
+ * @param	void
+ * @retval	void
+ * @caller 	Timer0_Routine interrupt 1
+ * @callee	Nixie_Scan
+ * @note	Timer0_Routine中每间隔2ms触发一次该函数，
+ 			实现数码管动态刷新显示，不被其他高cpu占用指令影响正常显示
+ */
+void Nixie_Loop(void) {
+	static unsigned char i = 1 ;
+	Nixie_Scan(i, Nixie_Buf[i]);
+	++i;
+	if (i > 8) { // 逐位显示缓存数组中的内容
+		i = 1;
+	}
+}
+```
+
+##### main.c
+
+```c
+#include <REGX52.H>
+#include "Timer0.h"
+#include "Key.h"
+#include "Nixie.h"
+#include "Delay.h"
+#include "AT24C02.h"
+
+unsigned char KeyNum; // 被按下的按键键值
+unsigned char Min, Sec, MiniSec; // 秒表时间数据
+unsigned RunFlag; // 秒表运行标志
+
+void main() {
+	Timer0_Init();
+	while (1) {
+		KeyNum = Key();
+		if (KeyNum == 1) { // 秒表工作状态转换
+			RunFlag = !RunFlag;
+		}
+		if (KeyNum == 2) { // 秒表清零
+			Min = 0;
+			Sec = 0;
+			MiniSec = 0;
+		}
+		if (KeyNum == 3) { // 秒表计时写入AT24C02
+			AT24C02_WriteByte(0, Min);
+			Delay(5);
+			AT24C02_WriteByte(1, Sec);
+			Delay(5);
+			AT24C02_WriteByte(2, MiniSec);
+			Delay(5);
+		}
+		if (KeyNum == 4) { // 从AT24C02读出数据作为秒表计时
+		  	Min = AT24C02_ReadByte(0);
+			Sec = AT24C02_ReadByte(1);
+			MiniSec = AT24C02_ReadByte(2);
+		}
+		// 数码管显示设置
+		Nixie_SetBuf(1, Min / 10);
+		Nixie_SetBuf(2, Min % 10);
+		Nixie_SetBuf(3, 11);
+		Nixie_SetBuf(4, Sec / 10);
+		Nixie_SetBuf(5, Sec % 10);
+		Nixie_SetBuf(6, 11);
+		Nixie_SetBuf(7, MiniSec / 10);
+		Nixie_SetBuf(8, MiniSec % 10);
+	}
+}
+
+/**
+ * @brief 	秒表计时
+ * @param	void
+ * @retval  void
+ * @caller	Timer0_Routine() interrupt 1
+ * @callee  null
+ * @note 	Timer0_Routine中每间隔10ms触发一次该函数，
+ 			仅工作在秒表运行模式
+ */
+void Second_Loop(void) {
+	if (RunFlag) {
+	  	++MiniSec;
+		if (MiniSec > 99) {
+			MiniSec = 0;
+			++Sec;
+			if (Sec > 59) {
+				Sec = 0;
+				++Min;
+				if (Min > 59) {
+					Min = 0;
+				}
+			}
+		}
+	}
+} 
+
+/**
+ * @brief 	定时器0中断处理函数	
+ * @param	void
+ * @retval	void
+ * @caller 	hardware
+ * @callee 	null
+ */
+void Timer0_Routine(void) interrupt 1 {
+	static unsigned int T0Count1, T0Count2, T0Count3;
+	// 设施T0Count每个1ms加1
+	TL0 = 0x18;		//设置定时初值
+	TH0 = 0xFC;		//设置定时初值
+	
+	// 中断实现按键扫描
+	++T0Count1;
+	if (T0Count1 >= 20) {
+		T0Count1 = 0;
+		Key_Loop();
+	}
+
+	// 中断实现数码管扫描
+	++T0Count2;
+	if (T0Count2 >= 2) {
+		T0Count2 = 0;
+		Nixie_Loop();
+	}
+
+	// 中断实现时间计数
+	++T0Count3;
+	if (T0Count3 >= 10) {
+		T0Count3 = 0;
+		Second_Loop();
+	}
+}
+```

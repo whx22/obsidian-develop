@@ -148,6 +148,239 @@ AT24C02固定地址为1010，可配置地址STC89C52为000
 
 ## 代码
 
+#### I2C.h
+
+```c
+#ifndef __I2C_H__
+#define __I2C_H__
+
+void I2C_Start(void);
+void I2C_Stop(void);
+void I2C_SendByte(unsigned char Byte);
+unsigned char I2C_ReceiveByte(void);
+void I2C_SendAck(unsigned char AckBit);
+unsigned char I2C_ReceiveAck(void);
+
+#endif // __I2C_H__
+```
+
+#### I2C.c
+
+```c
+#include <REGX52.H>
+
+sbit I2C_SCL = P2^1;
+sbit I2C_SDA = P2^0;
+
+/**
+ * @brief 	主机发送数据传输开始信号
+ * @param	无
+ * @retval	无
+ */
+void I2C_Start(void) {
+	// 保证开始信号之前，SDA、SCL处于高电平
+	I2C_SDA = 1;
+	I2C_SCL = 1;
+	// 开始信号：SCL高电平时SDA产生一个下降沿信号
+	// SDA先拉低，SCL后拉低
+	I2C_SDA = 0;
+	I2C_SCL = 0;
+}
+
+/**
+ * @brief 	主机发送数据传输结束信号
+ * @param	无
+ * @retval	无
+ */
+void I2C_Stop(void) {
+	// 保证停止之前，SDA处于低电平
+	I2C_SDA = 0;
+	// 停止信号：SCL高电平时SDA产生一个上升沿信号
+	// SCL先拉高，SDA后拉高
+	I2C_SCL = 1;
+	I2C_SDA = 1;
+}
+
+/**
+ * @brief 	主机向从机发送1Byte的数据
+ * @param   需要发送的数据
+ * @retval	无
+ */
+void I2C_SendByte(unsigned char Byte) {
+	unsigned char i;
+	for (i = 0; i < 8; ++i) {
+		// 从高位到低位，依次发送
+		I2C_SDA = Byte & (0x80 >> i);
+		// 根据AT24C02交流电气特性，
+		// STC89C52单片机执行语句周期小于AT24C02读取周期
+		// 程序中直接翻转SCL，不适用Delay函数，
+		// AT24C02可以直接实现读取数据
+		// note1: 高速单片机，需要查阅手册，实现传输和接受数据速率匹配
+		// note2: AT24C02写周期，接受周期需要5ms，需要对应的Delay函数
+		I2C_SCL = 1;
+		I2C_SCL = 0;	
+	}
+}
+
+/**
+ * @brief 	主机接受从机发送的1Byte数据
+ * @param	接受到的1Byte数据
+ * @retval	无
+ */
+unsigned char I2C_ReceiveByte(void) {
+	unsigned char i = 0, Byte = 0x00;
+
+  	// 主机释放SDA总线控制权，交给从机发送数据
+	I2C_SDA = 1;
+
+	for (i = 0; i < 8; ++i) {
+		// 主机接受从机数据，从高位到低位，依次发送
+		I2C_SCL = 1;
+		if (I2C_SDA) { Byte |= (0x80 >> i);}
+		I2C_SCL = 0;
+	}
+	return Byte;
+}
+
+/**
+ * @brief 	主机接受从机发送的1Byte数据后，主机向从机发送数据接受完成的应答信号
+ * @param	主机应答信号的具体值，应答：0，不应答：1
+ * @retval	无
+ */
+void I2C_SendAck(unsigned char AckBit) {
+	I2C_SDA = AckBit; // 应答：0，不应答：1
+	I2C_SCL = 1;
+	I2C_SCL = 0;
+}
+
+/**
+ * @brief 	主机向从机发送1Byte的数据，从机向主机发送数据接受完成的应答信号
+ * @param	无
+ * @retval	从机发送的应答信号的具体值，应答：0，不应答：1
+ */
+unsigned char I2C_ReceiveAck(void) {
+	unsigned char AckBit = 0;	
+	// 主机释放SDA总线控制权，交给从机发送应答信号
+	I2C_SDA = 1;
+	// 主机接受从机应答并返回
+	I2C_SCL = 1;
+	AckBit = I2C_SDA;
+	I2C_SCL = 0;
+	return AckBit;
+}
+```
+
+#### AT24C02.h
+
+```c
+#ifndef __AT24C02_H__
+#define __AT24C02_H__
+
+void AT24C02_WriteByte(unsigned char WordAddress, Data);
+unsigned char AT24C02_ReadByte(unsigned char WordAddress);
+
+#endif // __AT24C02_H__
+```
+
+#### AT24C02.c
+
+```c
+#include <REGX52.H>
+#include "I2C.h"
+
+#define AT24C02_ADDRESS 0xA0
+
+/**
+ * @brief 	单片机向AT24C02写入1Byte的数据
+ * @param1	写入到AT24C02的内部地址
+ * @param2  写入的数据
+ * @retval	无
+ */
+void AT24C02_WriteByte(unsigned char WordAddress, Data) {
+	I2C_Start();
+	I2C_SendByte(AT24C02_ADDRESS);
+	I2C_ReceiveAck(); // 需要考虑处理从机发送非应答的情况：重新发送数据或其他
+   	I2C_SendByte(WordAddress);
+	I2C_ReceiveAck();
+	I2C_SendByte(Data);
+	I2C_ReceiveAck();
+	I2C_Stop();
+}
+
+/**
+ * @brief 	单片机向AT24C02读取1Byte的数据
+ * @param1	读取的AT24C02的内部地址
+ * @retval	返回读取到的数据
+ */
+unsigned char AT24C02_ReadByte(unsigned char WordAddress) {
+	unsigned char Data;
+	I2C_Start();
+	I2C_SendByte(AT24C02_ADDRESS);
+	I2C_ReceiveAck(); // 需要考虑处理从机发送非应答的情况：重新发送数据或其他
+   	I2C_SendByte(WordAddress);
+	I2C_ReceiveAck();
+	I2C_Start();
+	I2C_SendByte(AT24C02_ADDRESS | 0x01); // 写地址转换为读地址
+	I2C_ReceiveAck();
+	Data = I2C_ReceiveByte();
+	I2C_SendAck(1); // 最后一次读，发送非应答
+	I2C_Stop();
+	return Data;
+}
+```
+
 ### AT24C02数据存储
 
+- ! AT24C02写周期时间：是指从一个写时序的有效停止开始至内部写周期结束的时间。最长5ms。
 
+```c
+#include <REGX52.H>
+#include "Delay.h"
+#include "LCD1602.h"
+#include "Key.h"
+#include "AT24C02.h"
+
+unsigned char KeyNum;
+unsigned int Num;
+
+void main() {
+	LCD_Init();
+	LCD_ShowNum(1, 1, Num, 5);
+	while (1) {
+		KeyNum = Key();
+		if (KeyNum == 1) {
+			++Num;
+			LCD_ShowNum(1, 1, Num, 5);
+		}
+		if (KeyNum == 2) {
+			--Num;
+			LCD_ShowNum(1, 1, Num, 5);
+		}
+		if (KeyNum == 3) { // 写入AT24C02
+			// 写入低八位 
+			AT24C02_WriteByte(0, Num % 256); 
+			Delay(5);
+			// 写入高八位
+			AT24C02_WriteByte(1, Num / 256);
+			Delay(5);
+			LCD_ShowString(2, 1, "Write OK");
+			Delay(1000);
+			LCD_ShowString(2, 1, "        ");
+		}
+		if (KeyNum == 4) { // 从AT24C02读出
+			Num = AT24C02_ReadByte(0);
+			Num |= AT24C02_ReadByte(1) << 8;
+			LCD_ShowNum(1, 1, Num, 5);
+			LCD_ShowString(2, 1, "Read  OK");
+			Delay(1000);
+			LCD_ShowString(2, 1, "        ");
+		} 
+	}
+}
+```
+
+### 秒表（利用定时器扫描按键数码管）
+
+```c
+
+```
